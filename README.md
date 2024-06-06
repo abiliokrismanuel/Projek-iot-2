@@ -51,5 +51,4 @@ To get started with this project, you'll need the following components and tools
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/YourUsername/Smart-Garden-IoT.git
-   cd Smart-Garden-IoT
+   git clone [https://github.com/YourUsername/Smart-Garden-IoT.git](https://github.com/abiliokrismanuel/Projek-iot-2.git)
