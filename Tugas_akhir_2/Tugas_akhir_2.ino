@@ -3,8 +3,8 @@
 #include <PubSubClient.h>
 
 // ---------------Wifi---------------
-const char *ssid = "haha";
-const char *password = "123456789";
+const char *ssid = "Woil";
+const char *password = "liow1234";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -17,19 +17,28 @@ const int mqtt_port = 1883;
 // ---------------Topic---------------
 
 const char *topicpump = "Kelompok2/WaterPump";
-const char *topicrelay = "Kelompok2/Relay";
+
 const char *topicping = "Kelompok2/Ping";
 const char *topicphmeter = "Kelompok2/Phmeter";
+
 
 // Deklarasi or smth like that
 char msg_phmeter[20];
 char msg_pump[20];
 char msg_ping[20];
-char msg_relay[20];
+
 
 const int potPin = A0;
 float ph;
 float voltage = 0;
+
+// Sensor Ultra Sonic
+#define triggerPin 4
+#define echoPin 0
+volatile int count = 0;
+bool objectPresent = true;
+
+
 
 void setup()
 {
@@ -63,9 +72,14 @@ void setup()
     }
   }
 
+
   //subscribe data
-  client.subscribe(topic);
-  pinMode(TdsSensorPin,INPUT);
+  // client.subscribe(topic);
+  
+  pinMode(potPin, INPUT);
+  pinMode(triggerPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  
 
 }
 
@@ -81,12 +95,6 @@ void callback(char *topic, byte *payload, unsigned int length) {
 }
 
 
-void setup() {
-  Serial.begin(9600);
-  pinMode(potPin, INPUT);
-  delay(1000);
-}
-
 void loop() {
   //For PH Meter
   int value = analogRead(potPin);
@@ -100,18 +108,28 @@ void loop() {
   ph = voltageToPH(voltage); // You need to implement this function
   
   Serial.println(ph, 2); // Print pH with 2 decimal places
-  dtostrf(tdsValue,2,2,msg_phmeter);
-  client.publish(topictds, msg_phmeter);
 
 
   //For Ping
-  
+  long duration, jarak, jarak2;
+  digitalWrite(triggerPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(triggerPin, HIGH);
+  delayMicroseconds(10);
+  duration = pulseIn(echoPin, HIGH);
+  jarak2 = (duration * 0.034) / 2;
 
-
+  dtostrf(jarak2, 6, 2, msg_ping);
+  client.publish(topicping, msg_ping);
+  Serial.print("Jarak: ");
+  Serial.print(jarak2);
+  Serial.println(" cm");
 
 
 
   delay(500);
+
+
   
 }
 
