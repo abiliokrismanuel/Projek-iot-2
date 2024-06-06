@@ -9,7 +9,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 // ---------------MQTT Broker---------------
-const char *mqtt_broker = "broker.emqx.io";
+const char *mqtt_broker = "46.250.231.231";
 const char *mqtt_username = "";
 const char *mqtt_password = "";
 const int mqtt_port = 1883;
@@ -33,8 +33,8 @@ float ph;
 float voltage = 0;
 
 // Sensor Ultra Sonic
-#define triggerPin 4
-#define echoPin 0
+#define triggerPin 5
+#define echoPin 16
 volatile int count = 0;
 bool objectPresent = true;
 

@@ -38,18 +38,28 @@ int analogBufferTemp[SCOUNT];
 int analogBufferIndex = 0, copyIndex = 0;
 float averageVoltage = 0, tdsValue = 0, temperature = 10;
 
-#define DHTPIN 16        // Pin digital untuk DHT11
+#define DHTPIN 5        // Pin digital untuk DHT11
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-int waterPin = 2;        // Pin digital untuk sensor aliran air
-volatile long pulse = 0;
-unsigned long lastTime = 0;
+// int waterPin = 4;        // Pin digital untuk sensor aliran air
+// volatile long pulse = 0;
+// unsigned long lastTime = 0;
 
-float volume = 0;
-float flowRate = 0;
+// float volume = 0;
+// float flowRate = 0;
 
-const int relayPin = 2;
+const int flowSensorPin = 4;
+volatile int pulseCount;
+unsigned long lastPulseTime;
+const float volumePerPulse = 0.1;
+
+const int relayPin = 16;
+
+void IRAM_ATTR pulseCounter()
+{
+  pulseCount++;
+}
 
 void setup() {
   Serial.println(F("Program Start"));
@@ -87,8 +97,13 @@ void setup() {
 
   pinMode(TdsSensorPin, INPUT);
 
-  pinMode(waterPin, INPUT);
-  attachInterrupt(digitalPinToInterrupt(waterPin), increase, RISING);
+  // pinMode(waterPin, INPUT);
+  // attachInterrupt(digitalPinToInterrupt(waterPin), increase, RISING);
+  pinMode(flowSensorPin, INPUT_PULLUP);
+  pulseCount = 0;
+ 
+  attachInterrupt(digitalPinToInterrupt(flowSensorPin), pulseCounter, FALLING);
+  dht.begin();
 
   pinMode(relayPin, OUTPUT);
 }
@@ -114,6 +129,11 @@ void callback(char *topic, byte *payload, unsigned int length) {
     }
   }
 }
+
+void Dim(){
+     pulseCount++;     
+}
+
 
 void loop() {
   // Fungsi untuk membaca nilai TDS
@@ -154,26 +174,24 @@ void loop() {
   client.publish(topicdhttemp, msg_dhttemp);
   client.publish(topicdhthum, msg_dhthum);
 
-  // Fungsi untuk membaca nilai aliran air
-  volume = 2.663 * pulse / 1000.0;
-  flowRate = volume / ((millis() - lastTime) / 60000.0);
 
-  if (millis() - lastTime > 2000) {
-    pulse = 0;
-    lastTime = millis();
+    // Waterflow control
+  unsigned long currentTime = millis();
+  unsigned long elapsedTime = currentTime - lastPulseTime;
+  // Protect against division by zero
+  if (elapsedTime > 0) {
+    float flowRate = (pulseCount * volumePerPulse) / (elapsedTime / 1000.0);
+    Serial.print("Flow rate: ");
+    Serial.print(flowRate);
+    Serial.println(" ml/s");
+    dtostrf(flowRate, 4, 2, msg_waterflowrate);
+    client.publish(topicwaterflow, msg_waterflowrate);
   }
+  // Reset counter
+  pulseCount = 0;
+  lastPulseTime = currentTime;
 
-  Serial.print("Volume: ");
-  Serial.print(volume);
-  Serial.println(" L/m");
-  Serial.print("Flow Rate: ");
-  Serial.print(flowRate);
-  Serial.println(" L/m");
 
-  dtostrf(volume, 4, 2, msg_waterflowliquid);
-  dtostrf(flowRate, 4, 2, msg_waterflowrate);
-  client.publish(topicliquid, msg_waterflowliquid);
-  client.publish(topicwaterflow, msg_waterflowrate);
 
   // Pengontrolan relay berdasarkan suhu
   // if (temp >= 35) {
@@ -185,12 +203,10 @@ void loop() {
   // }
 
   client.loop();
-  delay(2000);
+  delay(1000);
 }
 
-ICACHE_RAM_ATTR void increase() {
-  pulse++;
-}
+
 
 int getMedianNum(int bArray[], int iFilterLen) {
   int bTab[iFilterLen];
